@@ -40,8 +40,6 @@ venv.bak/
 */.ipynb_checkpoints/*
 
 # TensorFlow/Keras
-*.h5
-*.keras
 *.pb
 saved_model/
 checkpoints/
