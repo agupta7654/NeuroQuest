@@ -26,6 +26,7 @@ def main():
 
             # Fetch latest 1250 samples
             data = board.get_current_board_data(num_samples=1250)
+            print(BoardShim.get_eeg_channels(board_id))
             if data.shape[1] > 50:
                 data = data[:, 50:]  # remove first 50 samples if needed
 

@@ -74,19 +74,6 @@ class SSVEPRealtimeClassifier:
         print("Preparing OpenBCI board...")
         self.board.prepare_session()
 
-        # Get EEG channel indices for the board
-        self.eeg_channels = BoardShim.get_eeg_channels(self.board_id)
-        print(f"EEG channels: {self.eeg_channels}")
-
-        # We're using 4 channels: O1, O2, P3, P4
-        # For Cyton+Daisy, these should be configured on the appropriate channels
-        if len(self.eeg_channels) < 4:
-            raise ValueError(f"Board has only {len(self.eeg_channels)} channels, need at least 4")
-
-        # Use first 4 EEG channels (make sure your electrodes are on O1, O2, P3, P4)
-        self.eeg_channels = self.eeg_channels[:4]
-        print(f"Using channels: {self.eeg_channels}")
-
         # Start streaming
         print("Starting data stream...")
         self.board.start_stream()
@@ -113,7 +100,7 @@ class SSVEPRealtimeClassifier:
         data = self.board.get_current_board_data(samples_needed)
 
         # Extract EEG channels
-        eeg_data = data[self.eeg_channels, :]
+        eeg_data = data[[6,7,14,15], :]
 
         # Check if we have enough data
         if eeg_data.shape[1] < samples_needed:
