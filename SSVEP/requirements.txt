@@ -1,0 +1,9 @@
+brainflow
+numpy
+pandas
+scipy
+h5py
+mne
+tensorflow
+scikit-learn
+matplotlib
