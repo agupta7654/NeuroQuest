@@ -19,7 +19,7 @@ from preprocessing import SSVEPPreprocessor
 class SSVEPRealtimeClassifier:
     """Real-time SSVEP classification from OpenBCI headset"""
 
-    def __init__(self, model_path, board_id=BoardIds.CYTON_DAISY_BOARD,
+    def __init__(self, model_path, board_id=BoardIds.CYTON_BOARD,
                  sampling_rate=125, window_size=1.0,
                  udp_ip='127.0.0.1', udp_port=5005):
         """
@@ -99,18 +99,15 @@ class SSVEPRealtimeClassifier:
         # Get current data from board at native rate (250Hz)
         data = self.board.get_current_board_data(samples_needed)
 
-        # Extract EEG channels
-        eeg_data = data[[6,7,14,15], :]
+        # Extract EEG channels in order: O1, O2, P3, P4, PO3, PO4
+        eeg_data = data[[4, 5, 2, 3, 0, 1], :]
 
         # Check if we have enough data
         if eeg_data.shape[1] < samples_needed:
             return None
 
-        # Downsample from 250Hz to 125Hz (take every 2nd sample)
-        eeg_data_downsampled = eeg_data[:, ::2]
-
-        # Return most recent window (should be 125 samples for 1 second at 125Hz)
-        return eeg_data_downsampled[:, -self.window_samples:]
+        # Return most recent window
+        return eeg_data[:, -self.window_samples:]
 
     def classify_window(self, data_window):
         """

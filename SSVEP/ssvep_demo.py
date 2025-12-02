@@ -24,7 +24,7 @@ UDP_PORT = 5005
 # --- GLOBAL STATE ---
 detected_text = "Waiting for Input... (Press A or B to test)"
 last_detection_time = 0
-simulation_mode = True # Set to False when using real headset
+simulation_mode = False # Set to False when using real headset
 
 def udp_listener():
     """Listens for real BCI commands over UDP."""
@@ -44,6 +44,7 @@ def udp_listener():
             
     except OSError as e:
         print(f"UDP Listener Error: {e}")
+
 
 def process_command(command):
     """Updates the UI state based on the received command."""
