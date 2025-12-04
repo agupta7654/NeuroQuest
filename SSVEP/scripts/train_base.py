@@ -113,7 +113,7 @@ def main():
     # Configuration
     DATA_DIR = 'data'
     MODEL_DIR = 'models'
-    CHANNEL_NAMES = ['O1', 'O2', 'P3', 'P4']
+    CHANNEL_NAMES = ['O1', 'O2', 'P3', 'P4', 'PO3', 'PO4']
     SAMPLING_RATE = 250  # Hz
     WINDOW_SIZE = 1.0    # seconds
 

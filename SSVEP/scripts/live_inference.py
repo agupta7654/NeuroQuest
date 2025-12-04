@@ -4,7 +4,6 @@ Continuously reads EEG data, classifies SSVEP response, and sends commands via U
 """
 
 import time
-import socket
 import numpy as np
 from collections import deque
 import argparse
@@ -20,8 +19,7 @@ class SSVEPRealtimeClassifier:
     """Real-time SSVEP classification from OpenBCI headset"""
 
     def __init__(self, model_path, board_id=BoardIds.CYTON_BOARD,
-                 sampling_rate=125, window_size=1.0,
-                 udp_ip='127.0.0.1', udp_port=5005):
+                 sampling_rate=250, window_size=1.0):
         """
         Initialize real-time classifier
 
@@ -30,8 +28,6 @@ class SSVEPRealtimeClassifier:
             board_id: BrainFlow board ID
             sampling_rate: Sampling rate in Hz (default: 125 Hz to match training data)
             window_size: Window size for classification in seconds
-            udp_ip: UDP IP address for sending commands
-            udp_port: UDP port for sending commands
         """
         self.board_id = board_id
         self.sampling_rate = sampling_rate
@@ -49,28 +45,28 @@ class SSVEPRealtimeClassifier:
             window_size=window_size
         )
 
-        # UDP setup
-        self.udp_ip = udp_ip
-        self.udp_port = udp_port
-        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        print(f"UDP socket configured: {udp_ip}:{udp_port}")
-
         # BrainFlow setup
         self.params = BrainFlowInputParams()
-        self.board = BoardShim(board_id, self.params)
         self.eeg_channels = None
 
         # Data buffer
         self.data_buffer = None
 
         # Class labels
-        self.class_labels = {0: '8Hz', 1: '14Hz'}
+        self.class_labels = {0: '8Hz', 1: '14Hz', 2: 'Neither'}
 
         # Confidence threshold
-        self.confidence_threshold = 0.6
+        self.confidence_threshold = 0.6 # change if needed
 
-    def setup_board(self):
+    def setup_board(self, serial_port='COM3'):
         """Initialize and start the OpenBCI board"""
+        # Set serial port if provided
+        if serial_port:
+            self.params.serial_port = serial_port
+        
+        # Create board instance with configured parameters
+        self.board = BoardShim(self.board_id, self.params)
+        
         print("Preparing OpenBCI board...")
         self.board.prepare_session()
 
@@ -86,13 +82,10 @@ class SSVEPRealtimeClassifier:
         """
         Get the most recent window of EEG data
 
-        Note: OpenBCI samples at 250Hz, but we downsample to 125Hz to match training data
-
         Returns:
-            data: Array of shape (n_channels, window_samples) at 125Hz
+            data: Array of shape (n_channels, window_samples) at 250Hz
         """
         # OpenBCI native sampling rate is 250Hz
-        # We need to get 2x samples to downsample to 125Hz
         native_sampling_rate = 250
         samples_needed = int(self.window_size * native_sampling_rate)
 
@@ -137,16 +130,6 @@ class SSVEPRealtimeClassifier:
 
         return prediction, confidence, class_name
 
-    def send_udp_command(self, command):
-        """
-        Send command to Unity via UDP
-
-        Args:
-            command: String command to send
-        """
-        message = command.encode('utf-8')
-        self.udp_socket.sendto(message, (self.udp_ip, self.udp_port))
-
     def run(self, duration=None, verbose=True):
         """
         Run real-time classification loop
@@ -160,6 +143,7 @@ class SSVEPRealtimeClassifier:
         print("=" * 60)
         print("Class 0 (8Hz)  -> Command: INPUT_8HZ")
         print("Class 1 (14Hz) -> Command: INPUT_14HZ")
+        print("Class 2 (Neither) -> Command: INPUT_NEITHER")
         print(f"Confidence threshold: {self.confidence_threshold}")
         print("Press Ctrl+C to stop")
         print("=" * 60 + "\n")
@@ -183,21 +167,20 @@ class SSVEPRealtimeClassifier:
                 # Classify
                 prediction, confidence, class_name = self.classify_window(data_window)
 
-                # Only send command if confidence is above threshold
+                # Display classification results
                 if confidence >= self.confidence_threshold:
-                    # Send UDP command
                     if prediction == 0:
-                        self.send_udp_command("INPUT_8HZ")
                         command = "INPUT_8HZ"
-                    else:
-                        self.send_udp_command("INPUT_14HZ")
+                    elif prediction == 1:
                         command = "INPUT_14HZ"
+                    else:
+                        command = "INPUT_NEITHER"
 
                     if verbose:
-                        print(f"[{iteration:04d}] {class_name} | Confidence: {confidence:.3f} | Sent: {command}")
+                        print(f"[{iteration:04d}] {class_name} | Confidence: {confidence:.3f} | Command: {command}")
                 else:
                     if verbose:
-                        print(f"[{iteration:04d}] {class_name} | Confidence: {confidence:.3f} | LOW CONFIDENCE - No command sent")
+                        print(f"[{iteration:04d}] {class_name} | Confidence: {confidence:.3f} | LOW CONFIDENCE")
 
                 iteration += 1
 
@@ -217,33 +200,27 @@ class SSVEPRealtimeClassifier:
         if self.board.is_prepared():
             self.board.stop_stream()
             self.board.release_session()
-        self.udp_socket.close()
         print("Cleanup complete!")
 
 
 def main():
     """Main function for real-time inference"""
     parser = argparse.ArgumentParser(description='Real-time SSVEP classification')
-    parser.add_argument('--model', type=str, default='neuroquest_champion_s1.h5',
+    parser.add_argument('--model', type=str, default='SSVEP/neuroquest_champion_s1.h5',
                        help='Path to trained model')
     parser.add_argument('--duration', type=int, default=None,
                        help='Duration in seconds (default: infinite)')
     parser.add_argument('--confidence', type=float, default=0.6,
                        help='Confidence threshold (default: 0.6)')
-    parser.add_argument('--board', type=str, default='cyton_daisy',
-                       help='Board type: cyton_daisy, cyton, or synthetic')
+    parser.add_argument('--board', type=str, default='cyton',
+                       help='Board type: cyton, or synthetic')
     parser.add_argument('--serial-port', type=str, default='COM3',
                        help='Serial port for OpenBCI (e.g., /dev/ttyUSB0 or COM3)')
-    parser.add_argument('--udp-ip', type=str, default='127.0.0.1',
-                       help='UDP IP address')
-    parser.add_argument('--udp-port', type=int, default=5005,
-                       help='UDP port')
 
     args = parser.parse_args()
 
     # Map board name to BoardId
     board_map = {
-        'cyton_daisy': BoardIds.CYTON_DAISY_BOARD,
         'cyton': BoardIds.CYTON_BOARD,
         'synthetic': BoardIds.SYNTHETIC_BOARD
     }
@@ -255,24 +232,18 @@ def main():
 
     board_id = board_map[args.board]
 
-    # Create classifier (125Hz to match training data)
+    # Create classifier
     classifier = SSVEPRealtimeClassifier(
         model_path=args.model,
         board_id=board_id,
-        sampling_rate=125,
-        udp_ip=args.udp_ip,
-        udp_port=args.udp_port
+        sampling_rate=250
     )
-
-    # Set serial port if provided
-    if args.serial_port:
-        classifier.params.serial_port = args.serial_port
 
     # Set confidence threshold
     classifier.confidence_threshold = args.confidence
 
-    # Setup board
-    classifier.setup_board()
+    # Setup board with serial port
+    classifier.setup_board(serial_port=args.serial_port)
 
     # Run classification
     classifier.run(duration=args.duration)
