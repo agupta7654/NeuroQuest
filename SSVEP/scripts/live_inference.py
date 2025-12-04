@@ -220,7 +220,7 @@ class SSVEPRealtimeClassifier:
 def main():
     """Main function for real-time inference"""
     parser = argparse.ArgumentParser(description='Real-time SSVEP classification')
-    parser.add_argument('--model', type=str, default='SSVEP/neuroquest_model_s1.h5',
+    parser.add_argument('--model', type=str, default='SSVEP/neuroquest_10dat.h5',
                        help='Path to trained model')
     parser.add_argument('--duration', type=int, default=None,
                        help='Duration in seconds (default: infinite)')
