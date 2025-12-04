@@ -1,32 +1,30 @@
 """
-Real-time SSVEP inference using OpenBCI and BrainFlow
-Continuously reads EEG data, classifies SSVEP response, and sends commands via UDP
+Test script to read EEG data, normalize it, and print classification results
+Similar to live_inference but with data output for debugging
 """
 
 import time
 import numpy as np
-from collections import deque
 import argparse
 
-from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, BrainFlowPresets
-from brainflow.data_filter import DataFilter
+from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 import tensorflow as tf
 
 from preprocessing import SSVEPPreprocessor
 
 
-class SSVEPRealtimeClassifier:
-    """Real-time SSVEP classification from OpenBCI headset"""
+class SSVEPDataTester:
+    """Test EEG data with normalization and classification"""
 
     def __init__(self, model_path, board_id=BoardIds.CYTON_BOARD,
                  sampling_rate=250, window_size=1.0):
         """
-        Initialize real-time classifier
+        Initialize data tester
 
         Args:
             model_path: Path to trained model (.h5 file)
             board_id: BrainFlow board ID
-            sampling_rate: Sampling rate in Hz (default: 125 Hz to match training data)
+            sampling_rate: Sampling rate in Hz
             window_size: Window size for classification in seconds
         """
         self.board_id = board_id
@@ -49,14 +47,11 @@ class SSVEPRealtimeClassifier:
         self.params = BrainFlowInputParams()
         self.eeg_channels = None
 
-        # Data buffer
-        self.data_buffer = None
-
         # Class labels
         self.class_labels = {0: '8Hz', 1: '14Hz', 2: 'Neither'}
 
         # Confidence threshold
-        self.confidence_threshold = 0.6 # change if needed
+        self.confidence_threshold = 0.6
 
     def setup_board(self, serial_port='COM3'):
         """Initialize and start the OpenBCI board"""
@@ -102,29 +97,39 @@ class SSVEPRealtimeClassifier:
         # Return most recent window
         return eeg_data[:, -self.window_samples:]
 
-    def classify_window(self, data_window):
+    def classify_and_print(self, data_window):
         """
-        Classify a window of EEG data
+        Preprocess, classify a window of EEG data, and print results
 
         Args:
             data_window: Array of shape (n_channels, window_samples)
 
         Returns:
-            prediction: Class label (0 or 1)
+            prediction: Class label (0, 1, or 2)
             confidence: Confidence score
-            class_name: Human-readable class name
-            all_probs: All class probabilities
+            raw_electrode_data: Raw data per electrode
+            psd_unnormalized: PSD features before normalization
+            psd_normalized: PSD features after normalization (0 to 1)
         """
+        # Get raw electrode data
+        electrode_names = ['O1', 'O2', 'P3', 'P4', 'PO3', 'PO4']
+        electrode_data = []
+        
+        for i in range(data_window.shape[0]):
+            electrode_data.append(data_window[i, :])
+        
         # Preprocess using same method as SSVEP.ipynb
         # 1. Apply bandpass filter
         filtered = self.preprocessor.bandpass_filter(data_window)
         
-        # 2. Extract PSD features using Welch's method
+        # 2. Extract PSD features using Welch's method (averaged across channels)
         _, psd_mean = self.preprocessor.extract_psd_features(filtered)
         
+        # Store unnormalized PSD
+        psd_unnorm = psd_mean.copy()
+        
         # 3. Normalize to relative power (same as SSVEP.ipynb cell 9)
-        # Convert to Relative Power (0.0 to 1.0)
-        # This makes "Quiet" brains look like "Loud" brains
+        # This converts to 0-1 range
         total_power = np.sum(psd_mean)
         if total_power > 0:
             psd_norm = psd_mean / total_power
@@ -142,25 +147,22 @@ class SSVEPRealtimeClassifier:
         confidence = prediction_probs[prediction]
         class_name = self.class_labels[prediction]
 
-        return prediction, confidence, class_name, prediction_probs
+        return prediction, confidence, class_name, electrode_names, electrode_data, psd_unnorm, psd_norm
 
     def run(self, duration=None, verbose=True):
         """
-        Run real-time classification loop
+        Run test loop
 
         Args:
             duration: Duration in seconds (None for infinite)
-            verbose: Print classification results
+            verbose: Print results
         """
-        print("\n" + "=" * 60)
-        print("Starting Real-Time SSVEP Classification")
-        print("=" * 60)
-        print("Class 0 (8Hz)  -> Command: INPUT_8HZ")
-        print("Class 1 (14Hz) -> Command: INPUT_14HZ")
-        print("Class 2 (Neither) -> Command: INPUT_NEITHER")
-        print(f"Confidence threshold: {self.confidence_threshold}")
+        print("\n" + "=" * 80)
+        print("Starting EEG Data Test")
+        print("=" * 80)
+        print("Reading normalized EEG data and classification results")
         print("Press Ctrl+C to stop")
-        print("=" * 60 + "\n")
+        print("=" * 80 + "\n")
 
         start_time = time.time()
         iteration = 0
@@ -178,10 +180,10 @@ class SSVEPRealtimeClassifier:
                     time.sleep(0.1)
                     continue
 
-                # Classify
-                prediction, confidence, class_name, all_probs = self.classify_window(data_window)
+                # Classify and get electrode data
+                prediction, confidence, class_name, electrode_names, electrode_data, psd_unnorm, psd_norm = self.classify_and_print(data_window)
 
-                # Display classification results with all probabilities
+                # Determine command based on confidence
                 if confidence >= self.confidence_threshold:
                     if prediction == 0:
                         command = "INPUT_8HZ"
@@ -189,21 +191,35 @@ class SSVEPRealtimeClassifier:
                         command = "INPUT_14HZ"
                     else:
                         command = "INPUT_NEITHER"
-
-                    if verbose:
-                        print(f"[{iteration:04d}] {class_name} | Confidence: {confidence:.3f} | Command: {command} | Probs: 8Hz={all_probs[0]:.3f}, 14Hz={all_probs[1]:.3f}, Neither={all_probs[2]:.3f}")
                 else:
-                    if verbose:
-                        print(f"[{iteration:04d}] {class_name} | Confidence: {confidence:.3f} | LOW CONFIDENCE | Probs: 8Hz={all_probs[0]:.3f}, 14Hz={all_probs[1]:.3f}, Neither={all_probs[2]:.3f}")
+                    command = "LOW_CONFIDENCE"
+
+                # Print in the requested format
+                if verbose:
+                    # Print raw electrode data (first 10 samples)
+                    for i, (name, raw_data) in enumerate(zip(electrode_names, electrode_data)):
+                        raw_sample = ", ".join([f"{val:.2f}" for val in raw_data[:10]])
+                        print(f"  Raw [{name}]: {raw_sample}...")
+                    
+                    print()  # Blank line for readability
+                    
+                    # Print unnormalized PSD features (all values)
+                    unnorm_str = ", ".join([f"{val:.4f}" for val in psd_unnorm])
+                    print(f"  Unnormalized PSD: [{unnorm_str}]")
+                    
+                    # Print normalized PSD features (all values, 0-1 range)
+                    norm_str = ", ".join([f"{val:.6f}" for val in psd_norm])
+                    print(f"  Normalized PSD:   [{norm_str}]")
+                    
+                    print(f"Command: {command}\n")
 
                 iteration += 1
 
-                # Small delay to control update rate (adjust as needed)
-                # For 1-second windows, you might update every 0.5 seconds for smoother response
+                # Small delay to control update rate
                 time.sleep(0.25)
 
         except KeyboardInterrupt:
-            print("\n\nStopping classification...")
+            print("\n\nStopping test...")
 
         finally:
             self.cleanup()
@@ -218,8 +234,8 @@ class SSVEPRealtimeClassifier:
 
 
 def main():
-    """Main function for real-time inference"""
-    parser = argparse.ArgumentParser(description='Real-time SSVEP classification')
+    """Main function for data testing"""
+    parser = argparse.ArgumentParser(description='Test EEG data and classification')
     parser.add_argument('--model', type=str, default='SSVEP/neuroquest_model_s1.h5',
                        help='Path to trained model')
     parser.add_argument('--duration', type=int, default=None,
@@ -246,21 +262,21 @@ def main():
 
     board_id = board_map[args.board]
 
-    # Create classifier
-    classifier = SSVEPRealtimeClassifier(
+    # Create tester
+    tester = SSVEPDataTester(
         model_path=args.model,
         board_id=board_id,
         sampling_rate=250
     )
 
     # Set confidence threshold
-    classifier.confidence_threshold = args.confidence
+    tester.confidence_threshold = args.confidence
 
     # Setup board with serial port
-    classifier.setup_board(serial_port=args.serial_port)
+    tester.setup_board(serial_port=args.serial_port)
 
-    # Run classification
-    classifier.run(duration=args.duration, verbose=True)
+    # Run test
+    tester.run(duration=args.duration)
 
 
 if __name__ == '__main__':
