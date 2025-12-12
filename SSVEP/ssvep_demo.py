@@ -12,10 +12,8 @@ TEXT_COLOR = (255, 255, 255)
 
 # Circle Settings
 CIRCLE_RADIUS = 80
-LEFT_CIRCLE_POS = (200, 300)
-RIGHT_CIRCLE_POS = (600, 300)
-LEFT_FREQ = 8.0   # Hz
-RIGHT_FREQ = 14.0 # Hz
+CENTER_CIRCLE_POS = (400, 300)
+FREQ = 16.0   # Hz
 
 # UDP Settings (Listening for Model)
 UDP_IP = "127.0.0.1"
@@ -53,8 +51,8 @@ def process_command(command):
     if command == "INPUT_8HZ":
         detected_text = "DETECTED: 8 Hz (Left)"
         last_detection_time = time.time()
-    elif command == "INPUT_14HZ":
-        detected_text = "DETECTED: 14 Hz (Right)"
+    elif command == "NEITHER":
+        detected_text = "DETECTED: NEITHER"
         last_detection_time = time.time()
 
 # --- MAIN GAME LOOP ---
@@ -90,25 +88,18 @@ def main():
         # 2. Clear Screen
         screen.fill(BG_COLOR)
         
-        # 3. Draw Flashing Circles
+        # 3. Draw Flashing Circle
         current_time = time.time() - start_time
         
-        # Left Circle (8 Hz)
+        # Center Circle (16 Hz)
         # Sine wave: (sin(2*pi*f*t) + 1) / 2 maps -1..1 to 0..1
-        intensity_left = (math.sin(2 * math.pi * LEFT_FREQ * current_time) + 1) / 2
-        color_val_left = int(intensity_left * 255)
-        pygame.draw.circle(screen, (color_val_left, color_val_left, color_val_left), LEFT_CIRCLE_POS, CIRCLE_RADIUS)
+        intensity = (math.sin(2 * math.pi * FREQ * current_time) + 1) / 2
+        color_val = int(intensity * 255)
+        pygame.draw.circle(screen, (color_val, color_val, color_val), CENTER_CIRCLE_POS, CIRCLE_RADIUS)
         
-        # Right Circle (14 Hz)
-        intensity_right = (math.sin(2 * math.pi * RIGHT_FREQ * current_time) + 1) / 2
-        color_val_right = int(intensity_right * 255)
-        pygame.draw.circle(screen, (color_val_right, color_val_right, color_val_right), RIGHT_CIRCLE_POS, CIRCLE_RADIUS)
-        
-        # 4. Draw Labels
-        label_left = font.render("8 Hz", True, (100, 100, 100))
-        label_right = font.render("14 Hz", True, (100, 100, 100))
-        screen.blit(label_left, (LEFT_CIRCLE_POS[0]-30, LEFT_CIRCLE_POS[1]+100))
-        screen.blit(label_right, (RIGHT_CIRCLE_POS[0]-40, RIGHT_CIRCLE_POS[1]+100))
+        # 4. Draw Label
+        label = font.render("16 Hz", True, (100, 100, 100))
+        screen.blit(label, (CENTER_CIRCLE_POS[0]-35, CENTER_CIRCLE_POS[1]+100))
 
         # 5. Draw Detection Text
         # Reset text after 1 second if no new signal comes in

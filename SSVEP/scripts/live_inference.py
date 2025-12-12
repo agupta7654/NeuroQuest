@@ -53,7 +53,7 @@ class SSVEPRealtimeClassifier:
         self.data_buffer = None
 
         # Class labels
-        self.class_labels = {0: '8Hz', 1: '14Hz', 2: 'Neither'}
+        self.class_labels = {0: '8Hz', 1: 'Neither'}
 
         # Confidence threshold
         self.confidence_threshold = 0.6 # change if needed
@@ -156,8 +156,7 @@ class SSVEPRealtimeClassifier:
         print("Starting Real-Time SSVEP Classification")
         print("=" * 60)
         print("Class 0 (8Hz)  -> Command: INPUT_8HZ")
-        print("Class 1 (14Hz) -> Command: INPUT_14HZ")
-        print("Class 2 (Neither) -> Command: INPUT_NEITHER")
+        print("Class 1 (Neither) -> Command: INPUT_NEITHER")
         print(f"Confidence threshold: {self.confidence_threshold}")
         print("Press Ctrl+C to stop")
         print("=" * 60 + "\n")
@@ -185,16 +184,14 @@ class SSVEPRealtimeClassifier:
                 if confidence >= self.confidence_threshold:
                     if prediction == 0:
                         command = "INPUT_8HZ"
-                    elif prediction == 1:
-                        command = "INPUT_14HZ"
                     else:
                         command = "INPUT_NEITHER"
 
                     if verbose:
-                        print(f"[{iteration:04d}] {class_name} | Confidence: {confidence:.3f} | Command: {command} | Probs: 8Hz={all_probs[0]:.3f}, 14Hz={all_probs[1]:.3f}, Neither={all_probs[2]:.3f}")
+                        print(f"[{iteration:04d}] {class_name} | Confidence: {confidence:.3f} | Command: {command} | Probs: 8Hz={all_probs[0]:.3f}, Neither={all_probs[1]:.3f}")
                 else:
                     if verbose:
-                        print(f"[{iteration:04d}] {class_name} | Confidence: {confidence:.3f} | LOW CONFIDENCE | Probs: 8Hz={all_probs[0]:.3f}, 14Hz={all_probs[1]:.3f}, Neither={all_probs[2]:.3f}")
+                        print(f"[{iteration:04d}] {class_name} | Confidence: {confidence:.3f} | LOW CONFIDENCE | Probs: 8Hz={all_probs[0]:.3f}, Neither={all_probs[1]:.3f}")
 
                 iteration += 1
 
@@ -218,9 +215,9 @@ class SSVEPRealtimeClassifier:
 
 
 def main():
-    """Main function for real-time inference"""
+    """Main functio_--n for real-time inference"""
     parser = argparse.ArgumentParser(description='Real-time SSVEP classification')
-    parser.add_argument('--model', type=str, default='SSVEP/neuroquest_10dat.h5',
+    parser.add_argument('--model', type=str, default='SSVEP/neuroquest_model_s1.h5',
                        help='Path to trained model')
     parser.add_argument('--duration', type=int, default=None,
                        help='Duration in seconds (default: infinite)')
