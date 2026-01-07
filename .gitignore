@@ -1,12 +1,31 @@
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# macOS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+*.out
+
 # MATLAB Files (Large Data Files)
 *.mat
 data/*.mat
 data/**/*.mat
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
+# Python packaging/build
 *.so
 .Python
 build/
@@ -27,13 +46,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
-# Virtual Environments
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -63,12 +75,6 @@ data/calibration/*.npy
 *.swp
 *.swo
 *~
-.DS_Store
-
-# Logs
-*.log
-logs/
-*.out
 
 # Environment Variables
 .env
@@ -84,7 +90,3 @@ logs/
 tmp/
 temp/
 *.tmp
-
-# OS
-.DS_Store
-Thumbs.db

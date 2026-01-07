@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from brainflow.board_shim import BoardShim, BrainFlowInputParams, LogLevels, BoardIds
+from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 from antropy import higuchi_fd
 
 threshold_ch7 = None
@@ -34,8 +34,8 @@ def get_resting_state(board):
     data = np.hstack(all_data)
 
     # Compute Higuchi FD for channels 7 & 8
-    threshold_ch7 = higuchi_fd(data[6])
-    threshold_ch8 = higuchi_fd(data[7])
+    threshold_ch7 = higuchi_fd(data[4])
+    threshold_ch8 = higuchi_fd(data[5])
 
     print("Resting state FD values captured!")
     print(f"  Threshold CH7 = {threshold_ch7:.4f}")
@@ -83,8 +83,9 @@ def main():
     BoardShim.enable_dev_board_logger()
 
     params = BrainFlowInputParams()
-    params.serial_port = "COM3"
-    board_id = BoardIds.CYTON_DAISY_BOARD.value
+    # params.serial_port = "COM3" for a windows laptop
+    params.serial_port = "/dev/cu.usbserial-D200QEJN"  # for arnav's mac
+    board_id = BoardIds.CYTON_BOARD.value
 
     try:
         board = BoardShim(board_id, params)
