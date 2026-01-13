@@ -226,7 +226,7 @@ def main():
     parser.add_argument('--board', type=str, default='cyton',
                        help='Board type: cyton, or synthetic')
     parser.add_argument('--serial-port', type=str, default='COM3',
-                       help='Serial port for OpenBCI (e.g., /dev/ttyUSB0 or COM3)')
+                       help='Serial port for OpenBCI (e.g., /dev/ttyUSB0 or COM3)') # /dev/cu.usbserial-D200QEJN
 
     args = parser.parse_args()
 

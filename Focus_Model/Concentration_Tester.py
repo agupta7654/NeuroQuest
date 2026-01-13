@@ -35,7 +35,7 @@ def get_resting_state(board):
 
     # Compute Higuchi FD for channels 7 & 8
     threshold_ch7 = higuchi_fd(data[4])
-    threshold_ch8 = higuchi_fd(data[5])
+    threshold_ch8 = higuchi_fd(data[6])
 
     print("Resting state FD values captured!")
     print(f"  Threshold CH7 = {threshold_ch7:.4f}")
@@ -58,8 +58,8 @@ def check_concentration(board):
         if data.shape[1] > 50:
                 data = data[:, 50:]  # remove first 50 samples if needed
 
-        fd7 = higuchi_fd(data[6])
-        fd8 = higuchi_fd(data[7])
+        fd7 = higuchi_fd(data[4])
+        fd8 = higuchi_fd(data[6])
 
         print(f"\nFD7 = {fd7:.4f}, FD8 = {fd8:.4f}")
 

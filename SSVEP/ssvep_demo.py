@@ -13,7 +13,7 @@ TEXT_COLOR = (255, 255, 255)
 # Circle Settings
 CIRCLE_RADIUS = 80
 CENTER_CIRCLE_POS = (400, 300)
-FREQ = 16.0   # Hz
+FREQ = 8.0   # Hz
 
 # UDP Settings (Listening for Model)
 UDP_IP = "127.0.0.1"
@@ -91,14 +91,14 @@ def main():
         # 3. Draw Flashing Circle
         current_time = time.time() - start_time
         
-        # Center Circle (16 Hz)
+        # Center Circle (8 Hz)
         # Sine wave: (sin(2*pi*f*t) + 1) / 2 maps -1..1 to 0..1
         intensity = (math.sin(2 * math.pi * FREQ * current_time) + 1) / 2
         color_val = int(intensity * 255)
         pygame.draw.circle(screen, (color_val, color_val, color_val), CENTER_CIRCLE_POS, CIRCLE_RADIUS)
         
         # 4. Draw Label
-        label = font.render("16 Hz", True, (100, 100, 100))
+        label = font.render("8 Hz", True, (100, 100, 100))
         screen.blit(label, (CENTER_CIRCLE_POS[0]-35, CENTER_CIRCLE_POS[1]+100))
 
         # 5. Draw Detection Text
