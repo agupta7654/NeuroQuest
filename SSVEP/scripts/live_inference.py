@@ -164,6 +164,9 @@ class SSVEPRealtimeClassifier:
         start_time = time.time()
         iteration = 0
 
+        # Track whether each prediction is 8Hz (True/False), keeping only the last 10
+        recent_predictions = deque(maxlen=10)
+
         try:
             while True:
                 # Check duration
@@ -194,6 +197,15 @@ class SSVEPRealtimeClassifier:
                         print(f"[{iteration:04d}] {class_name} | Confidence: {confidence:.3f} | LOW CONFIDENCE | Probs: 8Hz={all_probs[0]:.3f}, Neither={all_probs[1]:.3f}")
 
                 iteration += 1
+
+                # Update rolling prediction history and evaluate switch state
+                recent_predictions.append(prediction == 0)  # 0 maps to 8Hz
+                count_8hz = sum(recent_predictions)
+
+                if len(recent_predictions) == 10 and count_8hz >= 6:
+                    print("switch state 1")
+                else:
+                    print("switch state 0")
 
                 # Small delay to control update rate (adjust as needed)
                 # For 1-second windows, you might update every 0.5 seconds for smoother response
@@ -257,7 +269,7 @@ def main():
     classifier.setup_board(serial_port=args.serial_port)
 
     # Run classification
-    classifier.run(duration=args.duration, verbose=True)
+    classifier.run(duration=args.duration, verbose=False)
 
 
 if __name__ == '__main__':
