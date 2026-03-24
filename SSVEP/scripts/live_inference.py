@@ -7,6 +7,7 @@ import time
 import numpy as np
 from collections import deque
 import argparse
+import socket
 
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, BrainFlowPresets
 from brainflow.data_filter import DataFilter
@@ -57,6 +58,10 @@ class SSVEPRealtimeClassifier:
 
         # Confidence threshold
         self.confidence_threshold = 0.6 # change if needed
+
+        self.udp_ip = "127.0.0.1"
+        self.udp_port = 5005
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def setup_board(self, serial_port='COM3'):
         """Initialize and start the OpenBCI board"""
@@ -202,10 +207,15 @@ class SSVEPRealtimeClassifier:
                 recent_predictions.append(prediction == 0)  # 0 maps to 8Hz
                 count_8hz = sum(recent_predictions)
 
-                if len(recent_predictions) == 10 and count_8hz >= 6:
-                    print("switch state 1")
+                if len(recent_predictions) == 10 and count_8hz >= 2:
+                    message = 1
                 else:
-                    print("switch state 0")
+                    message = 0
+
+                # print(message)
+
+                self.sock.sendto(str(message).encode(), (self.udp_ip, self.udp_port))
+
 
                 # Small delay to control update rate (adjust as needed)
                 # For 1-second windows, you might update every 0.5 seconds for smoother response
@@ -269,7 +279,7 @@ def main():
     classifier.setup_board(serial_port=args.serial_port)
 
     # Run classification
-    classifier.run(duration=args.duration, verbose=False)
+    classifier.run(duration=args.duration, verbose=True)
 
 
 if __name__ == '__main__':
